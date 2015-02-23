@@ -128,6 +128,13 @@ class TVDatabaseManager:
         self.disconnect()
         return nzb_list
 
+    def getNZB(self, nzb_name):
+        sql = "SELECT * FROM nzbs WHERE nzb_name=?"
+        self.connect()
+        res = self.conn.execute(sql, (nzb_name,))
+        self.disconnect()
+        return res.fetchone()
+        
     def deleteShow(self,show):
         sql = "DELETE FROM shows WHERE tvrage_id=?"
         self.connect()
