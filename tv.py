@@ -52,11 +52,12 @@ def edit_show_function():
     
     selectedQualities=[]
     done = False
+    priority = 0
     while not done:
         i = 0
         print "Selected Qualities:"
         for quality in selectedQualities:
-            print quality.quality_text
+            print quality[0].quality_text
         print ""
         for quality in allQualities:
             print str(i) + ": " + quality.quality_text
@@ -72,8 +73,9 @@ def edit_show_function():
             done = True
         else:
             qual = allQualities[sel]
-            selectedQualities.append(qual)
+            selectedQualities.append((qual, priority))
             allQualities.remove(qual)
+            priority = priority + 1
             done=False
     show.setQualities(selectedQualities)
 

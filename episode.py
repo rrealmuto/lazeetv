@@ -26,7 +26,6 @@ class Episode:
     def updateNZBs(self):
         api = UsenetCrawlerAPI('e16200fc2eae4735c00b1f703961febc')
         nzbs = api.tv_search(self.tvrage_id,self.season, self.episode)
-        print nzbs
         myDB = TVDatabaseManager()
         for nzb in nzbs:
             try:
@@ -42,19 +41,22 @@ class Episode:
     def startDownloading(self, update=False):
         if update:
             self.updateNZBs()
-        nzbs = self.getQualityNZBs()
-        if len(nzbs) > 0:
+        nzb = self.getQualityNZB()
+        if nzb:
             sab = sabNZBdAPI(settings.SAB_HOST, settings.SAB_PORT, settings.SAB_APIKEY)
-            sab.addNZBByLink(nzbs[0], settings.SAB_CAT)
-            nzbs[0].pending()
+            sab.addNZBByLink(nzb, settings.SAB_CAT)
+            nzb.pending()
             
-    def getQualityNZBs(self):
+    def getQualityNZB(self):
         desiredQualities = self.getShow().getQualities()
+        for q in desiredQualities:
+            print q.quality_text
         nzbs = self.getNZBs(NZB.NZB_STATUS_NOSTATUS)
-        print nzbs
         quality_nzbs = []
-        for nzb in nzbs:
-            for quality in desiredQualities:
+        for quality in desiredQualities:
+            for nzb in nzbs:
                 if quality.quality_text in nzb.nzb_name:
                     quality_nzbs.append(nzb)
-        return quality_nzbs
+                    nzbs.remove(nzb)
+                    return nzb
+        return None

@@ -19,11 +19,12 @@ class Show:
         myDB = TVDatabaseManager()
         return myDB.getEpisodes(self)
 
-    def setQualities(self, qualities):
+    def setQualities(self, qualitiesWPriorities):
         myDB = TVDatabaseManager()
         myDB.deleteShowQualities(self)
-        for quality in qualities:
-            myDB.addShowQuality(self, quality)
+        for qwp in qualitiesWPriorities:
+            quality, priority =  qwp
+            myDB.addShowQuality(self, quality, priority)
 
     def getQualities(self):
         myDB = TVDatabaseManager()

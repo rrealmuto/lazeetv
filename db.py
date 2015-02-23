@@ -22,7 +22,7 @@ class TVDatabaseManager:
 
         qualities_sql = "CREATE TABLE qualities(quality_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, quality_text TEXT NOT NULL)"
         shows_sql = "CREATE TABLE shows(tvrage_id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL, country TEXT NOT NULL, started INTEGER NOT NULL)"
-        show_qualities_sql = "CREATE TABLE showqualities(show_id INTEGER NOT NULL, quality_id INTEGER NOT NULL, PRIMARY KEY(show_id, quality_id), FOREIGN KEY(show_id) REFERENCES shows(tvrage_id) ON DELETE CASCADE, FOREIGN KEY(quality_id) REFERENCES qualities(quality_id) ON DELETE CASCADE);"
+        show_qualities_sql = "CREATE TABLE showqualities(show_id INTEGER NOT NULL, quality_id INTEGER NOT NULL, PRIORITY INTEGER NOT NULL, PRIMARY KEY(show_id, quality_id), FOREIGN KEY(show_id) REFERENCES shows(tvrage_id) ON DELETE CASCADE, FOREIGN KEY(quality_id) REFERENCES qualities(quality_id) ON DELETE CASCADE);"
         eps_sql = "CREATE TABLE episodes(show INTEGER NOT NULL, season INTEGER NOT NULL, episode INTEGER NOT NULL, ep_name TEXT, status INTEGER NOT NULL, PRIMARY KEY(show, season, episode), FOREIGN KEY(show) REFERENCES shows(tvrage_id) ON DELETE CASCADE);"
         nzbs_sql = "CREATE TABLE nzbs(show INTEGER NOT NULL, season INTEGER NOT NULL, episode INTEGER NOT NULL, nzb_name TEXT NOT NULL, nzb_link TEXT NOT NULL, status INTEGER NOT NULL, PRIMARY KEY(show, season, episode, nzb_link), FOREIGN KEY(show, season, episode) REFERENCES episodes(show, season, episode) ON DELETE CASCADE)"
         self.connect()
@@ -135,16 +135,16 @@ class TVDatabaseManager:
         res = self.conn.execute(sql, (show.tvrage_id,))
         self.disconnect()
 
-    def addShowQuality(self, show, quality):
+    def addShowQuality(self, show, quality, priority):
         from quality import Quality
-        sql = "INSERT INTO showqualities VALUES(?,?)"
+        sql = "INSERT INTO showqualities VALUES(?,?,?)"
         self.connect()
-        self.conn.execute(sql, (show.tvrage_id, quality.quality_id))
+        self.conn.execute(sql, (show.tvrage_id, quality.quality_id, priority))
         self.disconnect()
 
     def getShowQualities(self, show):
         from quality import Quality
-        sql = "SELECT Q.quality_id, Q.quality_text FROM qualities Q INNER JOIN showqualities SQ ON (Q.quality_id=SQ.quality_id) WHERE SQ.show_id=?"
+        sql = "SELECT Q.quality_id, Q.quality_text FROM qualities Q INNER JOIN showqualities SQ ON (Q.quality_id=SQ.quality_id) WHERE SQ.show_id=? ORDER BY priority"
         self.connect()
         res = self.conn.execute(sql, (show.tvrage_id,))
         quality_list = []
