@@ -18,3 +18,13 @@ class Show:
     def getEpisodes(self):
         myDB = TVDatabaseManager()
         return myDB.getEpisodes(self)
+
+    def setQualities(self, qualities):
+        myDB = TVDatabaseManager()
+        myDB.deleteShowQualities(self)
+        for quality in qualities:
+            myDB.addShowQuality(self, quality)
+
+    def getQualities(self):
+        myDB = TVDatabaseManager()
+        return myDB.getShowQualities(self)
