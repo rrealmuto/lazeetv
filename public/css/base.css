@@ -1,0 +1,41 @@
+tr.episode.status0 {
+    background-color:lightblue;
+}
+
+tr.episode.status1 {
+    background-color:lightyellow;
+}
+tr.episode.status2 {
+    background-color:lightgreen;
+}
+tr.episode.status3 {
+    background-color:pink;
+}
+
+header.lztv-header{
+    background-color:limegreen;
+}
+
+header.lztv-header h1{
+    color:white;
+}
+
+header.lztv-header ul li {
+    display: inline-block;
+}
+header.lztv-header ul li a{
+    display: inline-block;
+    padding:10px 15px 0px 15px;
+    background-color: green;
+    color:white;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 10px 10px 0px 0px;
+}
+
+body{
+    margin: 0px;
+}
+html{
+    padding:0px;
+}

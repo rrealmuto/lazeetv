@@ -46,5 +46,6 @@ class TVRageAPI:
             for ep in eps:
                 ep_num = ep.find('seasonnum').text
                 name = ep.find('title').text
-                eplist.append(Episode(tvrage_id=tvrage_id, season=season_num, episode=ep_num, ep_name=name))
+                airdate = ep.find('airdate').text
+                eplist.append(Episode(tvrage_id=tvrage_id, season=season_num, episode=ep_num, ep_name=name, airdate=airdate))
         return eplist

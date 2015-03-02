@@ -1,8 +1,9 @@
 import sqlite3
+import settings
 # from show import Show
 
 class TVDatabaseManager:
-    dbName = 'database.db'
+    dbName = settings.TV_DATABASE_FILE
     connected = False
 
     def connect(self):
@@ -23,8 +24,8 @@ class TVDatabaseManager:
         qualities_sql = "CREATE TABLE qualities(quality_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, quality_text TEXT NOT NULL)"
         shows_sql = "CREATE TABLE shows(tvrage_id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL, country TEXT NOT NULL, started INTEGER NOT NULL)"
         show_qualities_sql = "CREATE TABLE showqualities(show_id INTEGER NOT NULL, quality_id INTEGER NOT NULL, PRIORITY INTEGER NOT NULL, PRIMARY KEY(show_id, quality_id), FOREIGN KEY(show_id) REFERENCES shows(tvrage_id) ON DELETE CASCADE, FOREIGN KEY(quality_id) REFERENCES qualities(quality_id) ON DELETE CASCADE);"
-        eps_sql = "CREATE TABLE episodes(show INTEGER NOT NULL, season INTEGER NOT NULL, episode INTEGER NOT NULL, ep_name TEXT, status INTEGER NOT NULL, PRIMARY KEY(show, season, episode), FOREIGN KEY(show) REFERENCES shows(tvrage_id) ON DELETE CASCADE);"
-        nzbs_sql = "CREATE TABLE nzbs(show INTEGER NOT NULL, season INTEGER NOT NULL, episode INTEGER NOT NULL, nzb_name TEXT NOT NULL, nzb_link TEXT NOT NULL, status INTEGER NOT NULL, PRIMARY KEY(show, season, episode, nzb_link), FOREIGN KEY(show, season, episode) REFERENCES episodes(show, season, episode) ON DELETE CASCADE)"
+        eps_sql = "CREATE TABLE episodes(show INTEGER NOT NULL, season INTEGER NOT NULL, episode INTEGER NOT NULL, ep_name TEXT, status INTEGER NOT NULL, airdate DATE, PRIMARY KEY(show, season, episode), FOREIGN KEY(show) REFERENCES shows(tvrage_id) ON DELETE CASCADE);"
+        nzbs_sql = "CREATE TABLE nzbs(show INTEGER NOT NULL, season INTEGER NOT NULL, episode INTEGER NOT NULL, nzb_name TEXT NOT NULL, nzb_link TEXT NOT NULL, status INTEGER NOT NULL, last_tried DATE, PRIMARY KEY(show, season, episode, nzb_link), FOREIGN KEY(show, season, episode) REFERENCES episodes(show, season, episode) ON DELETE CASCADE)"
         self.connect()
         self.conn.execute(qualities_sql)
         self.conn.execute(shows_sql)
@@ -46,29 +47,39 @@ class TVDatabaseManager:
         self.disconnect()
 
     def saveEpisode(self, episode):
-        sql = "INSERT INTO episodes VALUES(?,?,?,?,?)"
+        sql = "INSERT INTO episodes VALUES(?,?,?,?,?,?)"
         self.connect()
         try:
-            self.conn.execute(sql, (episode.tvrage_id, episode.season, episode.episode, episode.ep_name, episode.status))
+            self.conn.execute(sql, (episode.tvrage_id, episode.season, episode.episode, episode.ep_name, episode.status, episode.airdate))
         except sqlite3.IntegrityError:
-            sql = "UPDATE episodes SET ep_name=?, status=? WHERE (show=? AND season=? AND episode=?)"
-            self.conn.execute(sql, (episode.ep_name, episode.status, episode.tvrage_id, episode.season, episode.episode))
+            sql = "UPDATE episodes SET ep_name=?, status=?, airdate=? WHERE (show=? AND season=? AND episode=?)"
+            self.conn.execute(sql, (episode.ep_name, episode.status, episode.airdate, episode.tvrage_id, episode.season, episode.episode))
         self.disconnect()
 
-    def addNZB(self, nzb):
-        sql = "INSERT INTO nzbs VALUES(?,?,?,?,?,?)"
+    def getEpisode(self, tvrage_id, season, episode):
+        from episode import Episode
+        sql = "SELECT * FROM episodes WHERE show=? AND season=? and episode=?"
         self.connect()
-        self.conn.execute(sql, (nzb.tvrage_id, nzb.season, nzb.episode, nzb.nzb_name, nzb.nzb_link, nzb.status))
+        res = self.conn.execute(sql, (tvrage_id, season, episode))
+        r = res.fetchone()
+        self.disconnect()
+        episode = Episode(r[0],r[1],r[2],r[3],r[4], r[5])
+        return episode
+
+    def addNZB(self, nzb):
+        sql = "INSERT INTO nzbs VALUES(?,?,?,?,?,?,?)"
+        self.connect()
+        self.conn.execute(sql, (nzb.tvrage_id, nzb.season, nzb.episode, nzb.nzb_name, nzb.nzb_link, nzb.status, None))
         self.disconnect()
 
     def saveNZB(self, nzb):
-        sql = "INSERT INTO nzbs VALUES(?,?,?,?,?,?)"
+        sql = "INSERT INTO nzbs VALUES(?,?,?,?,?,?,?)"
         self.connect()
         try:
-            self.conn.execute(sql, (str(nzb.tvrage_id), str(nzb.season), str(nzb.episode), nzb.nzb_name, nzb.nzb_link, nzb.status))
+            self.conn.execute(sql, (str(nzb.tvrage_id), str(nzb.season), str(nzb.episode), nzb.nzb_name, nzb.nzb_link, nzb.status, nzb.last_tried))
         except sqlite3.IntegrityError:
-            sql = "UPDATE nzbs SET nzb_name=?, status=? WHERE(show=? AND season=? AND episode=? AND nzb_link=?)"
-            self.conn.execute(sql, (nzb.nzb_name, nzb.status, nzb.tvrage_id, nzb.season, nzb.episode, nzb.nzb_link))
+            sql = "UPDATE nzbs SET nzb_name=?, status=?, last_tried=? WHERE(show=? AND season=? AND episode=? AND nzb_link=?)"
+            self.conn.execute(sql, (nzb.nzb_name, nzb.status, nzb.last_tried, nzb.tvrage_id, nzb.season, nzb.episode, nzb.nzb_link))
         self.disconnect()
 
     def getShow(self, tvrage_id):
@@ -93,19 +104,48 @@ class TVDatabaseManager:
             show_list.append(Show(tvrage_id,name,country,started))
         return show_list
 
-    def getEpisodes(self,show=None):
+    def getNZBsEpisode(self, nzb):
+        from episode import Episode
+        from nzb import NZB
+        sql = "SELECT * FROM episodes WHERE show=? AND season=? AND episode=?"
+        self.connect()
+        res = self.conn.execute(sql, (nzb.tvrage_id, nzb.season, nzb.episode))
+        r = res.fetchone()
+        self.disconnect()
+        return Episode(r[0], r[1], r[2], r[3], r[4], r[5])
+
+    def getEpisodes(self,show=None, status=None):
         from episode import Episode
         if show:
-            sql = "SELECT * FROM episodes WHERE show=?"
+            if status is None:
+                sql = "SELECT * FROM episodes WHERE show=?"
+                qs = (show.tvrage_id,)
+            else:
+                sql = "SELECT * FROM episodes WHERE show=? AND status=?"
+                qs = (show.tvrage_id, status)
         else:
             sql = "SELECT * FROM episodes"
+            qs = (show.tvrage_id)
         print sql
         self.connect()
-        res = self.conn.execute(sql, (show.tvrage_id,))
+        res = self.conn.execute(sql, qs)
         print res
         ep_list = []
         for r in res:
-            ep = Episode(r[0],r[1],r[2],r[3],r[4])
+            ep = Episode(r[0],r[1],r[2],r[3],r[4],r[5])
+            ep_list.append(ep)
+        self.disconnect()
+        return ep_list
+
+    def getNeededEpisodes(self, show):
+        from episode import Episode
+        from nzb import NZB
+        sql = "SELECT * FROM episodes WHERE show=? AND NOT(status=?)"
+        self.connect()
+        res = self.conn.execute(sql, (show.tvrage_id, NZB.NZB_STATUS_SUCCESS))
+        ep_list = []
+        for r in res:
+            ep = Episode(r[0],r[1],r[2],r[3],r[4],r[5])
             ep_list.append(ep)
         self.disconnect()
         return ep_list
@@ -123,17 +163,20 @@ class TVDatabaseManager:
         nzb_list = []
         for r in res:
 
-            nzb = NZB(r[0], r[1],r[2], r[3], r[4], r[5])
+            nzb = NZB(r[0], r[1],r[2], r[3], r[4], r[5], r[6])
             nzb_list.append(nzb)
         self.disconnect()
         return nzb_list
 
     def getNZB(self, nzb_name):
+        from nzb import NZB
         sql = "SELECT * FROM nzbs WHERE nzb_name=?"
         self.connect()
         res = self.conn.execute(sql, (nzb_name,))
+        r = res.fetchone()
         self.disconnect()
-        return res.fetchone()
+
+        return NZB(r[0], r[1], r[2], r[3],r[4], r[5], r[6])
         
     def deleteShow(self,show):
         sql = "DELETE FROM shows WHERE tvrage_id=?"

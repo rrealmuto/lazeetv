@@ -1,0 +1,45 @@
+#include "templates/head.html"
+
+<p>This page is used to add a new show</p>
+<input id="txt_show" ref="txt_show" name="show" type="text"/>
+<button id="btn_search" ref="txt_show" name="search">Search</button>
+
+
+<form id="showlist">
+    
+</form>
+<button id="btn_add">Add show</button>
+#raw
+<script type="text/javascript">
+    var shows = []
+    $(function(){
+        $("#btn_search").click(searchForShow);
+
+        function searchForShow(){
+            btn = this
+            $.get( "findshows?search="+$("#"+btn.getAttribute("ref")).val(),function(response){
+                    shows = JSON.parse(response);
+                    var show_list = []
+                    for(var i = 0; i < shows.length; i++){
+                        show_list.push("<input type='radio' name='show' value='" + i + "''>" + shows[i].name +"<br>");
+
+                    }
+                    
+                    list = $("#showlist");
+                    list.hide(500, function(){
+                        list.html(show_list.join(""));
+                        list.show(500);
+                    });
+                    
+            });
+        }
+        $("#btn_add").click(addShow);
+        function addShow(){
+            var selectedShowIndex = $('input[name=show]:checked', '#showlist').val();
+            var selectedShow = shows[selectedShowIndex];
+            $.post("addshow", {'show':JSON.stringify(selectedShow)})
+        }
+    });
+</script>
+#end raw
+#include "templates/footer.html"

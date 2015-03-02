@@ -8,12 +8,13 @@ import urllib
 
 class Episode:
 
-    def __init__(self, tvrage_id, season, episode, ep_name, status=NZB.NZB_STATUS_NOSTATUS):
+    def __init__(self, tvrage_id, season, episode, ep_name, status=NZB.NZB_STATUS_NOSTATUS, airdate=None):
         self.tvrage_id = tvrage_id
         self.season = season
         self.episode = episode
         self.ep_name = ep_name
         self.status = status
+        self.airdate=airdate
 
     def save(self):
         myDB = TVDatabaseManager()
@@ -30,7 +31,8 @@ class Episode:
         for nzb in nzbs:
             try:
                 myDB.addNZB(nzb)
-            except:
+            except Exception, e:
+                print e
                 continue
         return nzbs
 
@@ -40,13 +42,27 @@ class Episode:
 
     def startDownloading(self, update=False):
         if update:
+            print "Updating..."
             self.updateNZBs()
         nzb = self.getQualityNZB()
         if nzb:
             sab = sabNZBdAPI(settings.SAB_HOST, settings.SAB_PORT, settings.SAB_APIKEY)
             sab.addNZBByLink(nzb, settings.SAB_CAT)
             nzb.pending()
-            
+            nzb.setLastTried()
+            self.pending()
+        else: 
+            # No NZBs left with the desired quality
+            self.fail()
+
+    def fail(self):
+        self.status=NZB.NZB_STATUS_FAIL
+        self.save()
+
+    def pending(self):
+        self.status=NZB.NZB_STATUS_DOWNLOADING
+        self.save()
+
     def getQualityNZB(self):
         desiredQualities = self.getShow().getQualities()
         for q in desiredQualities:

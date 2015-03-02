@@ -1,0 +1,38 @@
+#include "templates/head.html"
+
+<h2>$show.name</h2>
+<a href="refresh?showid=$show.tvrage_id">Refresh</a>
+#for $season in $seasons
+<div class="season-div">
+    <h3>Season $season</h3>
+    <table>
+    #for $episode in $seasons[$season]
+        <tr class="episode status$episode.status">
+            <td>$episode.episode</td>
+            <td>$episode.airdate</td>
+            <td>$episode.ep_name</td>
+            <td><button class="ep_download_btn" data-season="$episode.season" data-episode="$episode.episode" data-show="$episode.tvrage_id">Download</button>
+        </tr>
+    #end for
+    </table>
+</div>
+#end for
+
+#raw
+<script type="text/javascript">
+    $(function(){
+        $(".ep_download_btn").click(startEpisodeDownload)
+    });
+
+    function startEpisodeDownload(){
+        
+        episode = {
+            'tvrage_id':this.getAttribute('data-show'),
+            'season':this.getAttribute('data-season'),
+            'episode':this.getAttribute('data-episode')
+        }
+        $.post('downloadepisode', {'episode':JSON.stringify(episode)});
+    }
+</script>
+#end raw
+#include "templates/footer.html"

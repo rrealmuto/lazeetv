@@ -82,7 +82,7 @@ def edit_show_function():
 
 def search_for_nzbs_function():
     show = prompt_for_show()
-    eps = show.getEpisodes()
+    eps = show.getNeededEpisodes()
     for ep in eps:
         print "Search for nzbs for S" + str(ep.season) +"E" + str(ep.episode)
         ep.startDownloading(update=True)
@@ -98,6 +98,7 @@ def prompt_for_show():
     i = 0
     for show in shows:
         print str(i) + ": " + show.name
+        i += 1
     index = -1
     done = False
     while not done:

@@ -1,0 +1,18 @@
+##This page should display all of the shows that are currently
+##in the database, and have a link to add a new show
+
+#include "templates/head.html"
+
+<p>This is the shows page</p>
+
+
+<h2>My Shows</h2>
+<a href="addshow">New Show</a>
+<div class="show-list-div">
+#for $show in $shows
+<a href="show?id=$show.tvrage_id">$show.name</a>
+<hr/>
+#end for
+</div>
+
+#include "templates/footer.html"
